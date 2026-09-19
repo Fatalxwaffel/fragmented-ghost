@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07070b">
+  <meta name="description" content="Fragmented Ghost apps, experiments, and Android releases in one place.">
+  <title>Fragmented Ghost — App Hub</title>
+  <style>
+    :root {
+      --bg: #07070b;
+      --panel: rgba(18, 18, 27, .78);
+      --panel-solid: #12121b;
+      --text: #f6f7fb;
+      --muted: #a7a9b8;
+      --line: rgba(255,255,255,.11);
+      --violet: #9d6cff;
+      --cyan: #42e8ff;
+      --pink: #ff4fc8;
+      --green: #70f3ad;
+      --shadow: 0 24px 80px rgba(0,0,0,.45);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% -10%, rgba(157,108,255,.22), transparent 34rem),
+        radial-gradient(circle at 95% 18%, rgba(66,232,255,.14), transparent 30rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      opacity: .19;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, #000, transparent 80%);
+    }
+
+    button, input, a { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    a { color: inherit; }
+    img { max-width: 100%; }
+    .shell { width: min(1180px, calc(100% - 32px)); margin-inline: auto; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(7,7,11,.76);
+      backdrop-filter: blur(18px);
+    }
+
+    .header-inner { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; font-weight: 900; letter-spacing: .09em; }
+    .brand-mark {
+      width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.22); border-radius: 11px;
+      display: grid; place-items: center; background: linear-gradient(145deg, rgba(157,108,255,.28), rgba(66,232,255,.08));
+      box-shadow: inset 0 0 22px rgba(157,108,255,.2);
+    }
+    .brand-mark span { font-size: 17px; background: linear-gradient(100deg, var(--violet), var(--cyan)); color: transparent; background-clip: text; }
+    .nav { display: flex; align-items: center; gap: 6px; }
+    .nav a { color: var(--muted); text-decoration: none; padding: 10px 13px; border-radius: 12px; font-weight: 700; font-size: .92rem; }
+    .nav a:hover, .nav a:focus-visible { color: var(--text); background: rgba(255,255,255,.07); outline: none; }
+    .menu-button { display: none; border: 1px solid var(--line); color: var(--text); background: rgba(255,255,255,.05); width: 44px; height: 44px; border-radius: 13px; cursor: pointer; }
+
+    .hero { padding: clamp(72px, 11vw, 140px) 0 72px; position: relative; }
+    .hero-grid { display: grid; grid-template-columns: 1.18fr .82fr; align-items: center; gap: clamp(36px, 7vw, 96px); }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--cyan); font-size: .76rem; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; width: 30px; height: 1px; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+    h1 { max-width: 800px; margin: 19px 0 22px; font-size: clamp(3.35rem, 9vw, 7.5rem); line-height: .84; letter-spacing: -.075em; text-transform: uppercase; }
+    .ghost-word { position: relative; display: inline-block; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,.77); }
+    .ghost-word::after { content: "Ghost"; position: absolute; inset: 0; transform: translate(3px, 2px); color: rgba(66,232,255,.2); -webkit-text-stroke: 0; z-index: -1; }
+    .hero-copy { max-width: 650px; color: #c7c9d5; font-size: clamp(1.05rem, 2vw, 1.25rem); }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+    .button {
+      min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      padding: 12px 18px; border: 1px solid var(--line); border-radius: 14px; color: var(--text);
+      background: rgba(255,255,255,.055); text-decoration: none; font-weight: 850; cursor: pointer; transition: .2s ease;
+    }
+    .button:hover, .button:focus-visible { transform: translateY(-2px); border-color: rgba(255,255,255,.28); outline: none; }
+    .button.primary { border: 0; color: #07070b; background: linear-gradient(105deg, var(--violet), var(--cyan)); box-shadow: 0 12px 42px rgba(107,123,255,.25); }
+    .button.small { min-height: 42px; padding: 9px 14px; font-size: .9rem; }
+    .button.disabled { opacity: .48; cursor: not-allowed; transform: none; }
+
+    .orbital {
+      aspect-ratio: 1; position: relative; display: grid; place-items: center; isolation: isolate;
+      border-radius: 50%; background: radial-gradient(circle, rgba(157,108,255,.14), transparent 62%);
+    }
+    .orbital::before, .orbital::after { content: ""; position: absolute; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); }
+    .orbital::before { inset: 8%; animation: spin 18s linear infinite; border-left-color: var(--cyan); border-right-color: var(--pink); }
+    .orbital::after { inset: 22%; animation: spin 12s linear infinite reverse; border-top-color: var(--violet); }
+    .core {
+      width: 48%; aspect-ratio: 1; display: grid; place-items: center; border-radius: 34% 66% 63% 37% / 46% 42% 58% 54%;
+      background: conic-gradient(from 210deg, var(--violet), #312078, var(--cyan), var(--pink), var(--violet));
+      box-shadow: 0 0 70px rgba(157,108,255,.34); animation: morph 9s ease-in-out infinite;
+    }
+    .core span { font-size: clamp(2rem, 6vw, 4.6rem); font-weight: 1000; letter-spacing: -.08em; text-shadow: 2px 2px 0 rgba(0,0,0,.35); }
+    .satellite { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 22px var(--cyan); top: 10%; left: 48%; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes morph { 50% { border-radius: 62% 38% 35% 65% / 40% 62% 38% 60%; transform: rotate(7deg) scale(1.04); } }
+
+    section { scroll-margin-top: 88px; }
+    .section { padding: 70px 0; }
+    .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
+    .section-heading h2 { margin: 0; font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: -.045em; }
+    .section-heading p { margin: 0; max-width: 560px; color: var(--muted); }
+
+    .toolbar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+    .search-wrap { flex: 1 1 260px; position: relative; }
+    .search-wrap span { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+    .search {
+      width: 100%; min-height: 48px; padding: 11px 16px 11px 44px; border: 1px solid var(--line); border-radius: 14px;
+      color: var(--text); background: rgba(255,255,255,.045); outline: none;
+    }
+    .search:focus { border-color: var(--violet); box-shadow: 0 0 0 4px rgba(157,108,255,.13); }
+    .filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+    .filter { white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: transparent; padding: 9px 14px; font-weight: 800; cursor: pointer; }
+    .filter.active { color: var(--text); border-color: rgba(157,108,255,.55); background: rgba(157,108,255,.14); }
+
+    .app-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; }
+    .app-card {
+      min-height: 330px; padding: 20px; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius);
+      background: linear-gradient(155deg, rgba(255,255,255,.075), rgba(255,255,255,.025)); box-shadow: var(--shadow); overflow: hidden; position: relative;
+    }
+    .app-card::after { content: ""; position: absolute; width: 160px; height: 160px; right: -70px; top: -70px; border-radius: 50%; background: var(--card-color); filter: blur(70px); opacity: .23; }
+    .card-top { display: flex; align-items: start; justify-content: space-between; gap: 16px; position: relative; z-index: 1; }
+    .app-icon { width: 64px; height: 64px; border-radius: 19px; display: grid; place-items: center; font-size: 1.25rem; font-weight: 1000; letter-spacing: -.06em; background: linear-gradient(145deg, var(--card-color), rgba(0,0,0,.5)); border: 1px solid rgba(255,255,255,.2); box-shadow: inset 0 0 20px rgba(255,255,255,.08); }
+    .status { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: 999px; color: #d4d5de; background: rgba(255,255,255,.055); font-size: .75rem; font-weight: 850; }
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--status-color, var(--green)); box-shadow: 0 0 10px var(--status-color, var(--green)); }
+    .app-card h3 { margin: 24px 0 8px; font-size: 1.42rem; letter-spacing: -.025em; position: relative; z-index: 1; }
+    .app-card p { margin: 0; color: var(--muted); position: relative; z-index: 1; }
+    .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
+    .tag { border: 1px solid var(--line); color: #bfc1cc; padding: 5px 8px; border-radius: 8px; font-size: .72rem; font-weight: 800; }
+    .card-actions { display: flex; gap: 9px; margin-top: auto; padding-top: 22px; position: relative; z-index: 1; }
+    .empty { grid-column: 1/-1; padding: 48px 24px; border: 1px dashed var(--line); border-radius: var(--radius); text-align: center; color: var(--muted); }
+
+    .store-wrap { display: grid; grid-template-columns: .8fr 1.2fr; gap: 20px; align-items: stretch; }
+    .store-copy, .price-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); }
+    .store-copy { padding: clamp(26px, 5vw, 48px); }
+    .store-copy h2 { font-size: clamp(2.2rem, 5vw, 4rem); line-height: .95; letter-spacing: -.055em; margin: 15px 0 20px; }
+    .store-copy p { color: var(--muted); }
+    .secure-note { display: flex; gap: 12px; padding-top: 18px; margin-top: 24px; border-top: 1px solid var(--line); color: #c9cbd5; font-size: .9rem; }
+    .plans { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+    .price-card { padding: 26px; display: flex; flex-direction: column; }
+    .price-card.featured { border-color: rgba(66,232,255,.42); background: linear-gradient(160deg, rgba(66,232,255,.1), rgba(157,108,255,.08)); }
+    .plan-name { color: var(--cyan); font-size: .8rem; font-weight: 950; letter-spacing: .13em; text-transform: uppercase; }
+    .price { margin: 14px 0 5px; font-size: 3rem; font-weight: 950; letter-spacing: -.055em; }
+    .price small { font-size: 1rem; color: var(--muted); letter-spacing: 0; }
+    .price-card ul { padding: 0; margin: 22px 0; list-style: none; color: #c8cad5; }
+    .price-card li { padding: 8px 0; display: flex; gap: 9px; }
+    .price-card li::before { content: "✓"; color: var(--green); font-weight: 900; }
+    .price-card .button { margin-top: auto; }
+
+    .roadmap { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .roadmap-item { padding: 22px; border-left: 2px solid var(--step-color); background: linear-gradient(90deg, rgba(255,255,255,.055), transparent); border-radius: 0 16px 16px 0; }
+    .roadmap-item strong { display: block; margin-bottom: 7px; font-size: 1.05rem; }
+    .roadmap-item span { color: var(--muted); }
+
+    footer { padding: 42px 0 max(42px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); color: var(--muted); }
+    .footer-inner { display: flex; justify-content: space-between; gap: 24px; align-items: center; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 16px; }
+    .footer-links a { text-decoration: none; }
+    .footer-links a:hover { color: var(--text); }
+
+    .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.72); backdrop-filter: blur(12px); }
+    .modal-backdrop[hidden] { display: none; }
+    .modal { width: min(560px, 100%); max-height: min(760px, 90vh); overflow: auto; padding: 26px; border: 1px solid rgba(255,255,255,.16); border-radius: 24px; background: #11111a; box-shadow: var(--shadow); }
+    .modal-head { display: flex; justify-content: space-between; gap: 20px; align-items: start; }
+    .modal h3 { margin: 4px 0 12px; font-size: 1.8rem; }
+    .modal p { color: var(--muted); }
+    .close-button { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line); color: var(--text); background: rgba(255,255,255,.05); cursor: pointer; }
+    .toast { position: fixed; left: 50%; bottom: 24px; z-index: 150; transform: translate(-50%, 30px); opacity: 0; pointer-events: none; padding: 12px 16px; border: 1px solid var(--line); border-radius: 13px; color: var(--text); background: #171722; box-shadow: var(--shadow); transition: .25s ease; text-align: center; width: min(460px, calc(100% - 32px)); }
+    .toast.show { opacity: 1; transform: translate(-50%,0); }
+
+    @media (max-width: 880px) {
+      .hero-grid, .store-wrap { grid-template-columns: 1fr; }
+      .orbital { width: min(430px, 86vw); margin: 0 auto; order: -1; }
+      .hero { padding-top: 50px; }
+      .app-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .section-heading { align-items: start; flex-direction: column; }
+      .roadmap { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 22px, 1180px); }
+      .menu-button { display: inline-grid; place-items: center; }
+      .nav { display: none; position: absolute; left: 11px; right: 11px; top: 64px; padding: 10px; border: 1px solid var(--line); border-radius: 16px; background: #11111a; box-shadow: var(--shadow); }
+      .nav.open { display: grid; }
+      .nav a { padding: 13px; }
+      .hero { padding-bottom: 44px; }
+      .app-grid, .plans { grid-template-columns: 1fr; }
+      .app-card { min-height: 300px; }
+      .footer-inner { align-items: start; flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="#top" aria-label="Fragmented Ghost home">
+        <span class="brand-mark" aria-hidden="true"><span>FG</span></span>
+        <span>FRAGMENTED GHOST</span>
+      </a>
+      <button class="menu-button" id="menuButton" aria-expanded="false" aria-controls="mainNav" aria-label="Open navigation">☰</button>
+      <nav class="nav" id="mainNav" aria-label="Main navigation">
+        <a href="#apps">Apps</a>
+        <a href="#store">APK Store</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#about">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="shell hero-grid">
+        <div>
+          <span class="eyebrow">Independent digital lab</span>
+          <h1>Fragmented <span class="ghost-word">Ghost</span></h1>
+          <p class="hero-copy">One home for experimental audio tools, living simulations, visual worlds, and Android releases.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="#apps">Explore the apps <span aria-hidden="true">↓</span></a>
+            <a class="button" href="#store">Get an APK</a>
+          </div>
+        </div>
+        <div class="orbital" aria-hidden="true">
+          <div class="satellite"></div>
+          <div class="core"><span>FG</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="apps">
+      <div class="shell">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">App collection</span>
+            <h2>Choose your experience</h2>
+          </div>
+          <p>Launch web apps instantly or view Android editions available from the APK store.</p>
+        </div>
+        <div class="toolbar">
+          <label class="search-wrap">
+            <span aria-hidden="true">⌕</span>
+            <span class="sr-only">Search apps</span>
+            <input class="search" id="searchInput" type="search" placeholder="Search Fragmented Ghost apps">
+          </label>
+          <div class="filters" id="filters" aria-label="Filter apps"></div>
+        </div>
+        <div class="app-grid" id="appGrid"></div>
+      </div>
+    </section>
+
+    <section class="section" id="store">
+      <div class="shell store-wrap">
+        <div class="store-copy">
+          <span class="eyebrow">Featured Android release</span>
+          <h2>GhostPhase 3D Pro</h2>
+          <p>On-device music enhancement with spatial depth, intelligent mastering controls, multiple themes, and high-quality export.</p>
+          <div class="secure-note"><span aria-hidden="true">⌁</span><span>Purchases open in a secure checkout. Your paid APK download should be delivered only after payment is confirmed.</span></div>
+        </div>
+        <div class="plans" id="plans"></div>
+      </div>
+    </section>
+
+    <section class="section" id="roadmap">
+      <div class="shell">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Always evolving</span>
+            <h2>What’s being built</h2>
+          </div>
+          <p>Projects move from experiment to web release to downloadable Android edition.</p>
+        </div>
+        <div class="roadmap">
+          <div class="roadmap-item" style="--step-color:var(--cyan)"><strong>01 · Web experiments</strong><span>Fast interactive builds available directly in the browser.</span></div>
+          <div class="roadmap-item" style="--step-color:var(--violet)"><strong>02 · Pro editions</strong><span>Deeper controls, saved projects, premium themes, and exports.</span></div>
+          <div class="roadmap-item" style="--step-color:var(--pink)"><strong>03 · Android releases</strong><span>Standalone APK editions designed for on-device use.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="about">
+      <div class="shell">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">The signal</span>
+            <h2>Built beyond the ordinary</h2>
+          </div>
+          <p>Fragmented Ghost explores the space between music, simulation, artificial life, and interactive visual technology.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-inner">
+      <span>© <span id="year"></span> Fragmented Ghost</span>
+      <div class="footer-links" id="footerLinks"></div>
+    </div>
+  </footer>
+
+  <div class="modal-backdrop" id="appModal" hidden role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div><span class="eyebrow" id="modalCategory">App</span><h3 id="modalTitle">App details</h3></div>
+        <button class="close-button" id="closeModal" aria-label="Close details">×</button>
+      </div>
+      <p id="modalDescription"></p>
+      <div class="tags" id="modalTags"></div>
+      <div class="card-actions" id="modalActions"></div>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const SITE_CONFIG = {
+      remoteConfigUrl: "",
+      refreshMinutes: 10,
+      links: {
+        spotify: "",
+        youtube: "",
+        instagram: "",
+        support: ""
+      }
+    };
+
+    const APPS = [
+      {
+        id: "ghostphase-3d",
+        name: "GhostPhase 3D",
+        short: "GP",
+        category: "Audio",
+        status: "Pro preview",
+        color: "#9d6cff",
+        description: "An on-device mastering and spatial-enhancement studio for giving music more clarity, impact, width, and depth.",
+        tags: ["Android", "Audio DSP", "On-device"],
+        launchUrl: "",
+        purchaseUrl: "#store"
+      },
+      {
+        id: "artificial-life-lab",
+        name: "Artificial Life Lab",
+        short: "AL",
+        category: "Simulation",
+        status: "In development",
+        color: "#70f3ad",
+        description: "A living evolution sandbox where digital organisms reproduce, mutate, compete, cooperate, and form family trees.",
+        tags: ["Evolution", "Neural brains", "Worlds"],
+        launchUrl: "",
+        purchaseUrl: ""
+      },
+      {
+        id: "aurelia-ocean",
+        name: "Aurelia Living Ocean",
+        short: "AO",
+        category: "Simulation",
+        status: "Web build",
+        color: "#42e8ff",
+        description: "An atmospheric living-ocean simulation filled with drifting jellyfish, schools of fish, light, and responsive motion.",
+        tags: ["Ocean", "WebGL", "Ambient"],
+        launchUrl: "",
+        purchaseUrl: ""
+      },
+      {
+        id: "isol-terra",
+        name: "Isol’Terra",
+        short: "IT",
+        category: "Worlds",
+        status: "Concept build",
+        color: "#ff4fc8",
+        description: "A self-evolving futuristic city shaped by biological, economic, structural, and weather systems.",
+        tags: ["City", "Emergent AI", "Destruction"],
+        launchUrl: "",
+        purchaseUrl: ""
+      },
+      {
+        id: "spatial-capture",
+        name: "GhostMesh Capture",
+        short: "GM",
+        category: "Tools",
+        status: "Research",
+        color: "#ffb454",
+        description: "A mobile capture pipeline for turning photos and video into spatial point clouds and reconstructed 3D meshes.",
+        tags: ["3D capture", "Meshes", "Mobile"],
+        launchUrl: "",
+        purchaseUrl: ""
+      },
+      {
+        id: "visual-audio-studio",
+        name: "Spectral Studio",
+        short: "SS",
+        category: "Audio",
+        status: "In development",
+        color: "#6b8cff",
+        description: "A music visualizer and recording studio with system-audio capture, reactive scenes, and video export.",
+        tags: ["Visualizer", "Recording", "Export"],
+        launchUrl: "",
+        purchaseUrl: ""
+      }
+    ];
+
+    const PLANS = [
+      {
+        name: "Pro Monthly",
+        price: "$5",
+        suffix: "/ month",
+        featured: false,
+        features: ["All mastering controls", "Every visual theme", "Feature updates", "Cancel anytime"],
+        checkoutUrl: ""
+      },
+      {
+        name: "Lifetime Unlock",
+        price: "$30",
+        suffix: "one time",
+        featured: true,
+        features: ["Permanent Pro access", "All current themes", "No recurring payment", "Future core updates"],
+        checkoutUrl: ""
+      }
+    ];
+
+    let apps = [...APPS];
+    let activeCategory = "All";
+    let lastFocusedElement = null;
+
+    const appGrid = document.querySelector("#appGrid");
+    const filters = document.querySelector("#filters");
+    const searchInput = document.querySelector("#searchInput");
+    const modal = document.querySelector("#appModal");
+    const toast = document.querySelector("#toast");
+
+    function safeUrl(value) {
+      if (!value || typeof value !== "string") return "";
+      if (value.startsWith("#")) return value;
+      try {
+        const parsed = new URL(value, window.location.href);
+        return ["https:", "mailto:"].includes(parsed.protocol) ? parsed.href : "";
+      } catch { return ""; }
+    }
+
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 3200);
+    }
+
+    function makeAction(label, url, primary = false) {
+      const validUrl = safeUrl(url);
+      if (validUrl) {
+        const link = element("a", `button small${primary ? " primary" : ""}`, label);
+        link.href = validUrl;
+        if (!validUrl.startsWith("#")) { link.target = "_blank"; link.rel = "noopener noreferrer"; }
+        return link;
+      }
+      const button = element("button", `button small disabled${primary ? " primary" : ""}`, `${label} soon`);
+      button.type = "button";
+      button.addEventListener("click", () => showToast("This app is not publicly linked yet."));
+      return button;
+    }
+
+    function renderFilters() {
+      const categories = ["All", ...new Set(apps.map(app => app.category))];
+      filters.replaceChildren(...categories.map(category => {
+        const button = element("button", `filter${category === activeCategory ? " active" : ""}`, category);
+        button.type = "button";
+        button.addEventListener("click", () => { activeCategory = category; renderFilters(); renderApps(); });
+        return button;
+      }));
+    }
+
+    function openDetails(app, trigger) {
+      lastFocusedElement = trigger;
+      document.querySelector("#modalCategory").textContent = app.category;
+      document.querySelector("#modalTitle").textContent = app.name;
+      document.querySelector("#modalDescription").textContent = app.description;
+      document.querySelector("#modalTags").replaceChildren(...app.tags.map(tag => element("span", "tag", tag)));
+      document.querySelector("#modalActions").replaceChildren(
+        makeAction("Launch web app", app.launchUrl, true),
+        makeAction("Get APK", app.purchaseUrl)
+      );
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+      document.querySelector("#closeModal").focus();
+    }
+
+    function closeDetails() {
+      modal.hidden = true;
+      document.body.style.overflow = "";
+      if (lastFocusedElement) lastFocusedElement.focus();
+    }
+
+    function renderApps() {
+      const term = searchInput.value.trim().toLowerCase();
+      const visible = apps.filter(app => {
+        const matchesCategory = activeCategory === "All" || app.category === activeCategory;
+        const haystack = [app.name, app.category, app.description, ...app.tags].join(" ").toLowerCase();
+        return matchesCategory && haystack.includes(term);
+      });
+
+      if (!visible.length) {
+        appGrid.replaceChildren(element("div", "empty", "No apps match that search yet."));
+        return;
+      }
+
+      appGrid.replaceChildren(...visible.map(app => {
+        const card = element("article", "app-card");
+        card.style.setProperty("--card-color", app.color);
+        const top = element("div", "card-top");
+        top.append(element("div", "app-icon", app.short), element("span", "status", app.status));
+        const title = element("h3", "", app.name);
+        const description = element("p", "", app.description);
+        const tags = element("div", "tags");
+        tags.append(...app.tags.slice(0,3).map(tag => element("span", "tag", tag)));
+        const actions = element("div", "card-actions");
+        const details = element("button", "button small", "Details");
+        details.type = "button";
+        details.addEventListener("click", () => openDetails(app, details));
+        actions.append(makeAction("Launch", app.launchUrl, true), details);
+        card.append(top, title, description, tags, actions);
+        return card;
+      }));
+    }
+
+    function renderPlans() {
+      const plansRoot = document.querySelector("#plans");
+      plansRoot.replaceChildren(...PLANS.map(plan => {
+        const card = element("article", `price-card${plan.featured ? " featured" : ""}`);
+        const name = element("span", "plan-name", plan.name);
+        const price = element("div", "price", plan.price);
+        price.append(element("small", "", ` ${plan.suffix}`));
+        const list = element("ul");
+        list.append(...plan.features.map(feature => element("li", "", feature)));
+        card.append(name, price, list, makeAction("Choose this plan", plan.checkoutUrl, true));
+        return card;
+      }));
+    }
+
+    function renderLinks() {
+      const labels = { spotify: "Spotify", youtube: "YouTube", instagram: "Instagram", support: "Support" };
+      const links = Object.entries(SITE_CONFIG.links).flatMap(([key, value]) => {
+        const url = safeUrl(value);
+        if (!url) return [];
+        const link = element("a", "", labels[key] || key);
+        link.href = url; link.target = "_blank"; link.rel = "noopener noreferrer";
+        return [link];
+      });
+      document.querySelector("#footerLinks").replaceChildren(...links);
+    }
+
+    async function loadRemoteConfig() {
+      const endpoint = safeUrl(SITE_CONFIG.remoteConfigUrl);
+      if (!endpoint || endpoint.startsWith("#")) return;
+      try {
+        const response = await fetch(`${endpoint}${endpoint.includes("?") ? "&" : "?"}t=${Date.now()}`, { headers: { "Accept": "application/json" } });
+        if (!response.ok) throw new Error("Update feed unavailable");
+        const data = await response.json();
+        if (Array.isArray(data.apps)) {
+          apps = data.apps.filter(item => item && typeof item.name === "string").map((item, index) => ({
+            id: String(item.id || `remote-${index}`),
+            name: String(item.name),
+            short: String(item.short || item.name.slice(0,2)).slice(0,3),
+            category: String(item.category || "Apps"),
+            status: String(item.status || "Available"),
+            color: /^#[0-9a-f]{6}$/i.test(item.color) ? item.color : "#9d6cff",
+            description: String(item.description || ""),
+            tags: Array.isArray(item.tags) ? item.tags.map(String).slice(0,5) : [],
+            launchUrl: safeUrl(item.launchUrl),
+            purchaseUrl: safeUrl(item.purchaseUrl)
+          }));
+          activeCategory = "All";
+          renderFilters(); renderApps();
+        }
+      } catch (error) {
+        console.warn("Background content sync skipped:", error.message);
+      }
+    }
+
+    document.querySelector("#menuButton").addEventListener("click", event => {
+      const open = document.querySelector("#mainNav").classList.toggle("open");
+      event.currentTarget.setAttribute("aria-expanded", String(open));
+    });
+    document.querySelectorAll("#mainNav a").forEach(link => link.addEventListener("click", () => {
+      document.querySelector("#mainNav").classList.remove("open");
+      document.querySelector("#menuButton").setAttribute("aria-expanded", "false");
+    }));
+    searchInput.addEventListener("input", renderApps);
+    document.querySelector("#closeModal").addEventListener("click", closeDetails);
+    modal.addEventListener("click", event => { if (event.target === modal) closeDetails(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !modal.hidden) closeDetails(); });
+
+    document.querySelector("#year").textContent = new Date().getFullYear();
+    renderFilters();
+    renderApps();
+    renderPlans();
+    renderLinks();
+    loadRemoteConfig();
+    if (SITE_CONFIG.remoteConfigUrl) setInterval(loadRemoteConfig, Math.max(1, SITE_CONFIG.refreshMinutes) * 60000);
+  </script>
+</body>
+</html>
