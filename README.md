@@ -16,13 +16,15 @@ Import this repo in Vercel (or Cloudflare Pages / GitHub Pages) and set the prod
 
 ## Notes
 
-- App catalog, plans, and social links live in the `SITE_CONFIG` / `APPS` / `PLANS` blocks inside `index.html`.
-- Put secure checkout URLs in `purchaseUrl` / `checkoutUrl` — not direct private APK links.
-- Optional APK sample: `downloads/ghostphase-3d.apk` (from the packaged WebView build).
+- App catalog and social links live in the `SITE_CONFIG` / `APPS` blocks inside `index.html` (keep `SOURCE.html` in sync).
+- GhostPhase web preview: `apps/ghostphase/`
+- Preview APK: `downloads/ghostphase-3d.apk`
+- Card / hero art: `assets/`
+- No paid subscriptions on this site.
 
 ## Sections
 
 - `#apps` — catalog
-- `#store` — GhostPhase 3D Pro / plans
+- `#store` — Downloads (APKs)
 - `#roadmap` — upcoming work
 - `#about` — studio notes

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#07070a"/>
+  <rect x="0" y="0" width="1200" height="630" fill="url(#g)" opacity="0.55"/>
+  <defs>
+    <radialGradient id="g" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#4c1d95" stop-opacity="0.55"/>
+      <stop offset="55%" stop-color="#0f172a" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#07070a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <text x="80" y="300" fill="#e8e4dc" font-family="Georgia, serif" font-size="72" letter-spacing="12" font-weight="400">FRAGMENTED</text>
+  <text x="84" y="302" fill="#a78bfa" font-family="Georgia, serif" font-size="72" letter-spacing="12" font-weight="400" opacity="0.45">FRAGMENTED</text>
+  <text x="80" y="390" fill="#cfc8bc" font-family="Georgia, serif" font-size="72" letter-spacing="18" font-weight="400">GHOST</text>
+  <text x="80" y="470" fill="#8b8794" font-family="system-ui, sans-serif" font-size="28" letter-spacing="4">signals from the in-between</text>
+  <text x="80" y="560" fill="#5b5666" font-family="system-ui, sans-serif" font-size="20" letter-spacing="3">fragmentedghost.com</text>
+</svg>

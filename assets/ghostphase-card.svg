@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <rect width="640" height="360" fill="#0c0c14"/>
+  <defs>
+    <radialGradient id="a" cx="30%" cy="20%" r="70%">
+      <stop stop-color="#9d6cff" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#0c0c14" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="b" cx="80%" cy="70%" r="55%">
+      <stop stop-color="#42e8ff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#0c0c14" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wave" x1="40" y1="180" x2="600" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9d6cff"/>
+      <stop offset="0.5" stop-color="#42e8ff"/>
+      <stop offset="1" stop-color="#ff4fc8"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#a)"/>
+  <rect width="640" height="360" fill="url(#b)"/>
+  <path d="M40 210 C100 140, 160 260, 220 190 S340 120, 400 200 S520 280, 600 170" stroke="url(#wave)" stroke-width="3.5" stroke-linecap="round" opacity="0.9"/>
+  <path d="M40 230 C110 170, 170 270, 240 210 S360 150, 420 220 S530 290, 600 190" stroke="url(#wave)" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
+  <text x="40" y="56" fill="#f6f7fb" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="28" font-weight="800" letter-spacing="-0.5">GhostPhase 3D</text>
+  <text x="40" y="86" fill="#a7a9b8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="600">Spatial mastering · on-device</text>
+</svg>
