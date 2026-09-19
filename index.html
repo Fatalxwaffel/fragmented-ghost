@@ -226,7 +226,7 @@
       <button class="menu-button" id="menuButton" aria-expanded="false" aria-controls="mainNav" aria-label="Open navigation">☰</button>
       <nav class="nav" id="mainNav" aria-label="Main navigation">
         <a href="#apps">Apps</a>
-        <a href="#store">APK Store</a>
+        <a href="#store">Downloads</a>
         <a href="#roadmap">Roadmap</a>
         <a href="#about">About</a>
       </nav>
@@ -242,7 +242,7 @@
           <p class="hero-copy">One home for experimental audio tools, living simulations, visual worlds, and Android releases.</p>
           <div class="hero-actions">
             <a class="button primary" href="#apps">Explore the apps <span aria-hidden="true">↓</span></a>
-            <a class="button" href="#store">Get an APK</a>
+            <a class="button" href="#store">Downloads</a>
           </div>
         </div>
         <div class="orbital" aria-hidden="true">
@@ -277,11 +277,25 @@
       <div class="shell store-wrap">
         <div class="store-copy">
           <span class="eyebrow">Featured Android release</span>
-          <h2>GhostPhase 3D Pro</h2>
+          <h2>GhostPhase 3D</h2>
           <p>On-device music enhancement with spatial depth, intelligent mastering controls, multiple themes, and high-quality export.</p>
-          <div class="secure-note"><span aria-hidden="true">⌁</span><span>Purchases open in a secure checkout. Your paid APK download should be delivered only after payment is confirmed.</span></div>
+          <div class="secure-note"><span aria-hidden="true">⌁</span><span>Free preview APK for testing. Google Play listing can replace this download later.</span></div>
+          <div class="hero-actions" style="margin-top:24px">
+            <a class="button primary" href="/downloads/ghostphase-3d.apk" download>Download APK</a>
+            <a class="button" href="#apps">Browse apps</a>
+          </div>
         </div>
-        <div class="plans" id="plans"></div>
+        <div class="price-card featured" style="justify-content:center">
+          <span class="plan-name">Android</span>
+          <div class="price" style="font-size:2rem">GhostPhase 3D</div>
+          <p style="color:var(--muted);margin:0 0 22px">Preview build · sideload for testing</p>
+          <ul>
+            <li>Spatial mastering controls</li>
+            <li>On-device processing</li>
+            <li>No subscription on this site</li>
+          </ul>
+          <a class="button primary" href="/downloads/ghostphase-3d.apk" download>Get the APK</a>
+        </div>
       </div>
     </section>
 
@@ -353,12 +367,12 @@
         name: "GhostPhase 3D",
         short: "GP",
         category: "Audio",
-        status: "Pro preview",
+        status: "Free preview",
         color: "#9d6cff",
         description: "An on-device mastering and spatial-enhancement studio for giving music more clarity, impact, width, and depth.",
         tags: ["Android", "Audio DSP", "On-device"],
         launchUrl: "",
-        purchaseUrl: "#store"
+        purchaseUrl: "/downloads/ghostphase-3d.apk"
       },
       {
         id: "artificial-life-lab",
@@ -422,24 +436,6 @@
       }
     ];
 
-    const PLANS = [
-      {
-        name: "Pro Monthly",
-        price: "$5",
-        suffix: "/ month",
-        featured: false,
-        features: ["All mastering controls", "Every visual theme", "Feature updates", "Cancel anytime"],
-        checkoutUrl: ""
-      },
-      {
-        name: "Lifetime Unlock",
-        price: "$30",
-        suffix: "one time",
-        featured: true,
-        features: ["Permanent Pro access", "All current themes", "No recurring payment", "Future core updates"],
-        checkoutUrl: ""
-      }
-    ];
 
     let apps = [...APPS];
     let activeCategory = "All";
@@ -551,19 +547,6 @@
       }));
     }
 
-    function renderPlans() {
-      const plansRoot = document.querySelector("#plans");
-      plansRoot.replaceChildren(...PLANS.map(plan => {
-        const card = element("article", `price-card${plan.featured ? " featured" : ""}`);
-        const name = element("span", "plan-name", plan.name);
-        const price = element("div", "price", plan.price);
-        price.append(element("small", "", ` ${plan.suffix}`));
-        const list = element("ul");
-        list.append(...plan.features.map(feature => element("li", "", feature)));
-        card.append(name, price, list, makeAction("Choose this plan", plan.checkoutUrl, true));
-        return card;
-      }));
-    }
 
     function renderLinks() {
       const labels = { spotify: "Spotify", youtube: "YouTube", instagram: "Instagram", support: "Support" };
@@ -621,7 +604,6 @@
     document.querySelector("#year").textContent = new Date().getFullYear();
     renderFilters();
     renderApps();
-    renderPlans();
     renderLinks();
     loadRemoteConfig();
     if (SITE_CONFIG.remoteConfigUrl) setInterval(loadRemoteConfig, Math.max(1, SITE_CONFIG.refreshMinutes) * 60000);
