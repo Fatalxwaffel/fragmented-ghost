@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07070b">
+<meta name="description" content="Artificial Life Lab — a living evolution sandbox by Fragmented Ghost.">
+<title>Artificial Life Lab — Fragmented Ghost</title>
+<!--
+  Artificial Life Lab — Fragmented Ghost
+  Controls:
+  - Play / Pause — start or freeze the simulation
+  - Reset — clear world and seed a fresh population + food
+  - Speed — simulation tick multiplier (0.25×–4×)
+  - Spawn — add a handful of random organisms
+  - Clear — remove all organisms (food stays)
+  Toggles:
+  - Predation — organisms may hunt smaller / weaker ones
+  - Cooperation boost — nearby similar organisms share a small energy bonus
+  - Show sense rings — draw perception radius for selected / all
+  Canvas: click an organism to inspect traits, parents, and lineage.
+  Soft-cap ~120 organisms; food regenerates; genes blend + mutate on birth.
+-->
+<style>
+:root{
+  --bg:#07070b;--panel:rgba(18,18,27,.88);--panel2:#0e0e16;--line:rgba(255,255,255,.11);
+  --text:#f6f7fb;--muted:#a7a9b8;--violet:#9d6cff;--cyan:#42e8ff;--green:#70f3ad;
+  --pink:#ff4fc8;--amber:#ffb454;--danger:#ff6387;
+  --shadow:0 18px 56px rgba(0,0,0,.42);--radius:18px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}
+body{
+  margin:0;min-width:300px;color:var(--text);
+  background:
+    radial-gradient(circle at 14% -6%,rgba(157,108,255,.22),transparent 30rem),
+    radial-gradient(circle at 88% 18%,rgba(66,232,255,.12),transparent 26rem),
+    radial-gradient(circle at 50% 100%,rgba(112,243,173,.06),transparent 22rem),
+    var(--bg);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  line-height:1.45;overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.14;
+  background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:36px 36px;mask-image:linear-gradient(to bottom,#000,transparent 72%);
+}
+button,input{font:inherit}button{color:inherit;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
+a{color:inherit;text-decoration:none}
+
+.shell{width:min(1180px,calc(100% - 24px));margin-inline:auto;padding:0 0 calc(36px + env(safe-area-inset-bottom))}
+
+.site-header{
+  position:sticky;top:0;z-index:40;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  background:rgba(7,7,11,.82);backdrop-filter:blur(18px);
+}
+.header-inner{min-height:60px;display:flex;align-items:center;gap:14px}
+.back{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--muted);
+  font-weight:700;font-size:.82rem;letter-spacing:.04em;
+}
+.back:hover,.back:focus-visible{color:var(--text);border-color:rgba(66,232,255,.35);outline:none}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.mark{
+  width:34px;height:34px;border-radius:11px;flex:0 0 auto;
+  border:1px solid rgba(255,255,255,.18);
+  background:linear-gradient(145deg,rgba(157,108,255,.32),rgba(66,232,255,.1));
+  box-shadow:inset 0 0 16px rgba(157,108,255,.2);display:grid;place-items:center;
+  font-size:.9rem;
+}
+.brand-text{min-width:0;line-height:1.15}
+.brand-text strong{display:block;font-size:.95rem;letter-spacing:.1em}
+.brand-text span{display:block;color:var(--muted);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
+.run-state{margin-left:auto;display:flex;align-items:center;gap:7px;color:var(--muted);font-size:.74rem}
+.dot{width:8px;height:8px;border-radius:50%;background:#4a5163}
+.dot.on{background:var(--green);box-shadow:0 0 12px var(--green)}
+
+.hero{padding:22px 0 14px}
+.eyebrow{color:var(--cyan);text-transform:uppercase;letter-spacing:.18em;font-size:.7rem;font-weight:750}
+.hero h1{font-size:clamp(1.7rem,5.5vw,2.8rem);letter-spacing:-.04em;margin:10px 0 8px;line-height:1.05}
+.hero h1 em{font-style:normal;color:transparent;background:linear-gradient(90deg,var(--cyan),var(--violet) 55%,var(--green));background-clip:text;-webkit-background-clip:text}
+.hero p{margin:0;max-width:62ch;color:#b0b3c4;font-size:.95rem}
+
+.layout{display:grid;grid-template-columns:1.35fr .9fr;gap:14px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+.stage{
+  position:relative;border:1px solid #2a3148;border-radius:22px;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 30%,#12152a,#07080f 70%);
+  box-shadow:var(--shadow);aspect-ratio:16/11;min-height:280px;
+}
+#world{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.stage-label{
+  position:absolute;left:12px;top:10px;z-index:2;
+  color:#b8c0d4;font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;
+  pointer-events:none;
+}
+.stage-pill{
+  position:absolute;right:10px;top:8px;z-index:2;
+  padding:5px 9px;border-radius:99px;border:1px solid #3a4660;
+  background:#070a10aa;color:var(--cyan);font-size:.62rem;letter-spacing:.1em;
+  pointer-events:none;
+}
+
+.panel{
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:linear-gradient(155deg,rgba(16,16,26,.92),rgba(10,10,16,.92));
+  padding:14px;box-shadow:0 12px 36px #0004;
+}
+.panel + .panel{margin-top:12px}
+.panel h2{margin:0 0 10px;font-size:.92rem;letter-spacing:.03em}
+.panel-sub{color:var(--muted);font-size:.7rem;margin:-4px 0 12px}
+
+.controls{display:flex;flex-wrap:wrap;gap:8px}
+.btn{
+  min-height:42px;border-radius:12px;border:1px solid #303b50;background:#121827;
+  padding:0 14px;font-weight:720;font-size:.84rem;
+  transition:transform .12s,border-color .15s,box-shadow .15s,background .15s;
+}
+.btn:active{transform:scale(.98)}
+.btn.primary{border-color:#62eeff88;background:linear-gradient(115deg,#187185,#5530a3 62%,#6a2878);box-shadow:0 0 22px #42e8ff18}
+.btn.primary:hover{box-shadow:0 0 28px #42e8ff30}
+.btn.ghost{background:#0a0d15}
+.btn.warn{border-color:#5a3a48;background:#1a1016}
+.btn.small{min-height:36px;padding:0 11px;font-size:.78rem;border-radius:10px}
+.btn.toggle.active{color:#051014;background:var(--cyan);border-color:var(--cyan)}
+.btn.toggle.active.green{background:var(--green);border-color:var(--green)}
+.btn.toggle.active.violet{color:#100818;background:var(--violet);border-color:var(--violet)}
+
+.slider-row{margin-top:12px}
+.slider-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.slider-top label{font-size:.8rem}
+.slider-top output{font:700 .76rem ui-monospace,monospace;color:var(--cyan)}
+input[type=range]{
+  width:100%;height:6px;border:0;border-radius:99px;appearance:none;outline:none;
+  background:linear-gradient(90deg,var(--cyan) var(--fill,50%),#263044 var(--fill,50%));
+}
+input[type=range]::-webkit-slider-thumb{
+  appearance:none;width:20px;height:20px;border-radius:50%;
+  background:#f5fbff;border:4px solid #1f8090;box-shadow:0 0 14px #42e8ff55;
+}
+input[type=range]::-moz-range-thumb{
+  width:20px;height:20px;border-radius:50%;background:#f5fbff;border:4px solid #1f8090;
+}
+
+.toggles{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.metric{
+  padding:10px 8px;border-radius:12px;background:#080b12;border:1px solid #1a2435;text-align:center;
+}
+.metric b{display:block;color:var(--cyan);font:700 .95rem ui-monospace,monospace}
+.metric span{display:block;color:var(--muted);font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;margin-top:4px}
+.metric.wide{grid-column:span 3}
+@media(max-width:520px){.metrics{grid-template-columns:repeat(2,1fr)}.metric.wide{grid-column:span 2}}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:.8rem}
+.kv dt{color:var(--muted)}.kv dd{margin:0;font:600 .8rem ui-monospace,monospace;text-align:right;color:var(--text)}
+.trait-bars{margin-top:10px;display:grid;gap:7px}
+.trait{display:grid;grid-template-columns:72px 1fr 36px;gap:8px;align-items:center;font-size:.72rem}
+.trait span{color:var(--muted)}.trait b{font:700 .7rem ui-monospace;color:var(--cyan);text-align:right}
+.bar{height:6px;border-radius:99px;background:#1a2233;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--violet),var(--cyan))}
+.swatch{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid #fff4;vertical-align:-1px;margin-right:4px}
+
+.empty{color:var(--muted);font-size:.8rem;padding:6px 0}
+.lineage{font-size:.74rem;line-height:1.55;max-height:180px;overflow:auto}
+.lineage .node{padding:5px 8px;border-radius:8px;border:1px solid #1e273a;background:#090c14;margin-bottom:5px;cursor:pointer}
+.lineage .node:hover{border-color:#3a4a68}
+.lineage .node.me{border-color:var(--cyan);background:#0c1a22}
+.lineage .node.dead{opacity:.55}
+.lineage .gen{color:var(--violet);font-weight:700;margin-right:6px}
+.lineage .meta{color:var(--muted);font-size:.68rem}
+
+.hint{margin-top:14px;color:#7a8299;font-size:.7rem;line-height:1.55}
+.hint b{color:#aeb6ca}
+
+@media(prefers-reduced-motion:reduce){
+  .btn{transition:none}
+  body::before{opacity:.06}
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="shell header-inner">
+    <a class="back" href="/" aria-label="Back to App Hub">← Hub</a>
+    <div class="brand">
+      <div class="mark" aria-hidden="true">◈</div>
+      <div class="brand-text">
+        <strong>ARTIFICIAL LIFE LAB</strong>
+        <span>by Fragmented Ghost</span>
+      </div>
+    </div>
+    <div class="run-state"><i id="runDot" class="dot on"></i><span id="runText">Running</span></div>
+  </div>
+</header>
+
+<main class="shell">
+  <section class="hero">
+    <div class="eyebrow">Evolution sandbox</div>
+    <h1>Watch digital life <em>evolve.</em></h1>
+    <p>Organisms wander, eat, reproduce, and mutate on a living canvas. Toggle predation or cooperation, inspect lineages, and nudge the pressure of natural selection.</p>
+  </section>
+
+  <div class="layout">
+    <div>
+      <div class="stage">
+        <canvas id="world" aria-label="Life world canvas"></canvas>
+        <span class="stage-label">Living world</span>
+        <span id="capPill" class="stage-pill">POP 0 / 120</span>
+      </div>
+      <p class="hint"><b>Tip:</b> Click an organism to inspect genes and family tree. Soft-cap keeps the lab at ~120 creatures for smooth performance.</p>
+    </div>
+
+    <aside>
+      <section class="panel">
+        <h2>Controls</h2>
+        <div class="controls">
+          <button id="btnPlay" class="btn primary" type="button">Pause</button>
+          <button id="btnReset" class="btn ghost" type="button">Reset</button>
+          <button id="btnSpawn" class="btn ghost small" type="button">Spawn</button>
+          <button id="btnClear" class="btn warn small" type="button">Clear</button>
+        </div>
+        <div class="slider-row">
+          <div class="slider-top"><label for="speed">Sim speed</label><output id="speedOut">1.0×</output></div>
+          <input id="speed" type="range" min="25" max="400" value="100" style="--fill:25%">
+        </div>
+        <div class="toggles">
+          <button id="togPred" class="btn toggle small" type="button" aria-pressed="false">Predation</button>
+          <button id="togCoop" class="btn toggle small green" type="button" aria-pressed="false">Cooperation</button>
+          <button id="togSense" class="btn toggle small violet" type="button" aria-pressed="false">Sense rings</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Population stats</h2>
+        <div class="metrics">
+          <div class="metric"><b id="sPop">0</b><span>Population</span></div>
+          <div class="metric"><b id="sGen">0</b><span>Max gen</span></div>
+          <div class="metric"><b id="sFood">0</b><span>Food</span></div>
+          <div class="metric"><b id="sBirths">0</b><span>Births</span></div>
+          <div class="metric"><b id="sDeaths">0</b><span>Deaths</span></div>
+          <div class="metric"><b id="sAvgSp">—</b><span>Avg speed</span></div>
+          <div class="metric wide"><b id="sAvgSz">—</b><span>Avg size · avg sense</span></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Selected organism</h2>
+        <p class="panel-sub">Click a creature on the canvas</p>
+        <div id="selEmpty" class="empty">Nothing selected.</div>
+        <div id="selBody" hidden>
+          <dl class="kv">
+            <dt>ID</dt><dd id="oId">—</dd>
+            <dt>Generation</dt><dd id="oGen">—</dd>
+            <dt>Parents</dt><dd id="oParents">—</dd>
+            <dt>Energy</dt><dd id="oEnergy">—</dd>
+            <dt>Age</dt><dd id="oAge">—</dd>
+            <dt>Color</dt><dd id="oColor">—</dd>
+          </dl>
+          <div class="trait-bars">
+            <div class="trait"><span>Speed</span><div class="bar"><i id="bSpeed"></i></div><b id="tSpeed">—</b></div>
+            <div class="trait"><span>Size</span><div class="bar"><i id="bSize"></i></div><b id="tSize">—</b></div>
+            <div class="trait"><span>Sense</span><div class="bar"><i id="bSense"></i></div><b id="tSense">—</b></div>
+            <div class="trait"><span>Aggression</span><div class="bar"><i id="bAgg"></i></div><b id="tAgg">—</b></div>
+            <div class="trait"><span>Cooperation</span><div class="bar"><i id="bCoop"></i></div><b id="tCoop">—</b></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Family tree</h2>
+        <p class="panel-sub">Ancestors ↑ · selected · descendants ↓</p>
+        <div id="treeEmpty" class="empty">Select an organism to view lineage.</div>
+        <div id="treeBody" class="lineage" hidden></div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script>
+"use strict";
+/* Artificial Life Lab — Fragmented Ghost */
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = (a = 0, b = 1) => a + Math.random() * (b - a);
+const pick = (arr) => arr[(Math.random() * arr.length) | 0];
+const hsl = (h, s, l, a = 1) => `hsla(${h|0},${s}%,${l}%,${a})`;
+
+const MAX_ORG = 120;
+const START_ORG = 42;
+const FOOD_TARGET = 70;
+const REPRO_ENERGY = 78;
+const CHILD_COST = 36;
+const MUTATION = 0.12;
+
+const canvas = $("#world");
+const ctx = canvas.getContext("2d", { alpha: false });
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const S = {
+  running: true,
+  speed: 1,
+  predation: false,
+  cooperation: false,
+  senseRings: false,
+  W: 800, H: 550,
+  orgs: [],
+  food: [],
+  nextId: 1,
+  births: 0,
+  deaths: 0,
+  selected: null,
+  archive: new Map(), // id -> snapshot for lineage of dead parents
+  lastTs: 0,
+  raf: 0,
+  uiTick: 0,
+};
+
+function geneDefaults() {
+  return {
+    speed: rand(0.55, 1.35),
+    size: rand(0.55, 1.25),
+    sense: rand(0.5, 1.4),
+    aggression: rand(0.15, 0.75),
+    coop: rand(0.2, 0.8),
+    hue: rand(160, 300),
+  };
+}
+
+function mutate(g) {
+  const m = (v, lo, hi, scale = 1) => clamp(v + (Math.random() - 0.5) * MUTATION * 2 * scale, lo, hi);
+  return {
+    speed: m(g.speed, 0.35, 2.2),
+    size: m(g.size, 0.4, 2.0),
+    sense: m(g.sense, 0.35, 2.4),
+    aggression: m(g.aggression, 0, 1),
+    coop: m(g.coop, 0, 1),
+    hue: ((g.hue + (Math.random() - 0.5) * 28) % 360 + 360) % 360,
+  };
+}
+
+function blend(a, b) {
+  const mix = (x, y) => (x + y) * 0.5 + (Math.random() - 0.5) * MUTATION * 0.5;
+  return mutate({
+    speed: mix(a.speed, b.speed),
+    size: mix(a.size, b.size),
+    sense: mix(a.sense, b.sense),
+    aggression: mix(a.aggression, b.aggression),
+    coop: mix(a.coop, b.coop),
+    hue: ((a.hue + b.hue) * 0.5 + (Math.random() - 0.5) * 18 + 360) % 360,
+  });
+}
+
+function archiveOrg(o) {
+  S.archive.set(o.id, {
+    id: o.id,
+    gen: o.gen,
+    parents: o.parents.slice(),
+    genes: { ...o.genes },
+    alive: false,
+    children: o.children.slice(),
+  });
+  // keep archive bounded
+  if (S.archive.size > 800) {
+    const keys = [...S.archive.keys()].slice(0, S.archive.size - 600);
+    keys.forEach((k) => S.archive.delete(k));
+  }
+}
+
+function makeOrg(x, y, genes, parents = [], gen = 0) {
+  const g = genes || geneDefaults();
+  const o = {
+    id: S.nextId++,
+    x, y,
+    vx: rand(-1, 1),
+    vy: rand(-1, 1),
+    energy: rand(42, 68),
+    age: 0,
+    gen,
+    parents: parents.slice(0, 2),
+    children: [],
+    genes: g,
+    cool: 0,
+    wanderT: rand(0, 2),
+    wanderA: rand(0, Math.PI * 2),
+    alive: true,
+  };
+  return o;
+}
+
+function makeFood(x, y) {
+  return {
+    x: x ?? rand(12, S.W - 12),
+    y: y ?? rand(12, S.H - 12),
+    r: rand(2.2, 3.6),
+    n: rand(0, Math.PI * 2),
+  };
+}
+
+function resize() {
+  const box = canvas.getBoundingClientRect();
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  const cssW = Math.max(1, box.width);
+  const cssH = Math.max(1, box.height);
+  const W = Math.floor(cssW * dpr);
+  const H = Math.floor(cssH * dpr);
+  if (canvas.width !== W || canvas.height !== H) {
+    const sx = S.W ? W / S.W : 1;
+    const sy = S.H ? H / S.H : 1;
+    canvas.width = W;
+    canvas.height = H;
+    if (S.orgs.length || S.food.length) {
+      S.orgs.forEach((o) => { o.x *= sx; o.y *= sy; });
+      S.food.forEach((f) => { f.x *= sx; f.y *= sy; });
+    }
+    S.W = W;
+    S.H = H;
+  }
+}
+
+function seedWorld(count = START_ORG) {
+  S.orgs = [];
+  S.food = [];
+  S.nextId = 1;
+  S.births = 0;
+  S.deaths = 0;
+  S.selected = null;
+  S.archive.clear();
+  for (let i = 0; i < count; i++) {
+    S.orgs.push(makeOrg(rand(40, S.W - 40), rand(40, S.H - 40)));
+  }
+  for (let i = 0; i < FOOD_TARGET; i++) S.food.push(makeFood());
+  updateSelUI();
+  updateStats();
+}
+
+function spawnBunch(n = 8) {
+  const room = MAX_ORG - S.orgs.length;
+  const add = Math.min(n, Math.max(0, room));
+  for (let i = 0; i < add; i++) {
+    S.orgs.push(makeOrg(rand(30, S.W - 30), rand(30, S.H - 30)));
+  }
+}
+
+function clearOrgs() {
+  S.orgs.forEach(archiveOrg);
+  S.deaths += S.orgs.length;
+  S.orgs = [];
+  S.selected = null;
+  updateSelUI();
+}
+
+function findById(id) {
+  return S.orgs.find((o) => o.id === id) || null;
+}
+
+function snapshot(id) {
+  const live = findById(id);
+  if (live) {
+    return {
+      id: live.id,
+      gen: live.gen,
+      parents: live.parents.slice(),
+      genes: { ...live.genes },
+      alive: true,
+      children: live.children.slice(),
+    };
+  }
+  return S.archive.get(id) || null;
+}
+
+function radiusOf(o) {
+  return 4.5 + o.genes.size * 5.5;
+}
+
+function senseOf(o) {
+  return 28 + o.genes.sense * 42;
+}
+
+function nearestFood(o) {
+  const R = senseOf(o);
+  const R2 = R * R;
+  let best = null, bd = Infinity;
+  for (let i = 0; i < S.food.length; i++) {
+    const f = S.food[i];
+    const dx = f.x - o.x, dy = f.y - o.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < bd && d2 < R2) { bd = d2; best = f; }
+  }
+  return best;
+}
+
+function nearestMate(o) {
+  if (o.energy < REPRO_ENERGY * 0.85 || o.cool > 0) return null;
+  const R = senseOf(o) * 0.9;
+  const R2 = R * R;
+  let best = null, bd = Infinity;
+  for (let i = 0; i < S.orgs.length; i++) {
+    const m = S.orgs[i];
+    if (m === o || m.cool > 0 || m.energy < REPRO_ENERGY * 0.7) continue;
+    const dx = m.x - o.x, dy = m.y - o.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < bd && d2 < R2) { bd = d2; best = m; }
+  }
+  return best;
+}
+
+function nearestPrey(o) {
+  if (!S.predation || o.genes.aggression < 0.42) return null;
+  const R = senseOf(o);
+  const R2 = R * R;
+  let best = null, bd = Infinity;
+  const myR = radiusOf(o);
+  for (let i = 0; i < S.orgs.length; i++) {
+    const p = S.orgs[i];
+    if (p === o) continue;
+    // prefer smaller / lower energy
+    if (radiusOf(p) >= myR * 0.92 && p.energy >= o.energy * 0.85) continue;
+    if (p.genes.aggression > o.genes.aggression + 0.25) continue;
+    const dx = p.x - o.x, dy = p.y - o.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < bd && d2 < R2) { bd = d2; best = p; }
+  }
+  return best;
+}
+
+function steerToward(o, tx, ty, force) {
+  const dx = tx - o.x, dy = ty - o.y;
+  const len = Math.hypot(dx, dy) || 1;
+  o.vx += (dx / len) * force;
+  o.vy += (dy / len) * force;
+}
+
+function softSeparate(o) {
+  for (let i = 0; i < S.orgs.length; i++) {
+    const b = S.orgs[i];
+    if (b === o) continue;
+    const dx = o.x - b.x, dy = o.y - b.y;
+    const minD = radiusOf(o) + radiusOf(b) * 0.85;
+    const d2 = dx * dx + dy * dy;
+    if (d2 > 0 && d2 < minD * minD) {
+      const d = Math.sqrt(d2);
+      const push = (minD - d) * 0.08;
+      o.vx += (dx / d) * push;
+      o.vy += (dy / d) * push;
+    }
+  }
+}
+
+function tryReproduce(a, b) {
+  if (S.orgs.length >= MAX_ORG) return;
+  if (a.energy < REPRO_ENERGY || b.energy < REPRO_ENERGY) return;
+  if (a.cool > 0 || b.cool > 0) return;
+  const dist = Math.hypot(a.x - b.x, a.y - b.y);
+  if (dist > radiusOf(a) + radiusOf(b) + 8) return;
+
+  a.energy -= CHILD_COST;
+  b.energy -= CHILD_COST;
+  a.cool = 1.8;
+  b.cool = 1.8;
+
+  const genes = blend(a.genes, b.genes);
+  const gen = Math.max(a.gen, b.gen) + 1;
+  const child = makeOrg(
+    (a.x + b.x) * 0.5 + rand(-6, 6),
+    (a.y + b.y) * 0.5 + rand(-6, 6),
+    genes,
+    [a.id, b.id],
+    gen
+  );
+  child.energy = 34 + (a.genes.coop + b.genes.coop) * 6;
+  a.children.push(child.id);
+  b.children.push(child.id);
+  S.orgs.push(child);
+  S.births++;
+}
+
+function kill(o, idx) {
+  archiveOrg(o);
+  o.alive = false;
+  // drop a bit of food
+  if (Math.random() < 0.55) {
+    S.food.push(makeFood(o.x + rand(-4, 4), o.y + rand(-4, 4)));
+  }
+  if (S.selected === o.id) S.selected = null;
+  S.orgs.splice(idx, 1);
+  S.deaths++;
+}
+
+function step(dt) {
+  // regenerate food
+  while (S.food.length < FOOD_TARGET) {
+    if (Math.random() > 0.35) break;
+    S.food.push(makeFood());
+  }
+  // gentle food drift
+  for (let i = 0; i < S.food.length; i++) {
+    const f = S.food[i];
+    f.n += dt * 0.6;
+    f.x += Math.cos(f.n) * 2.5 * dt;
+    f.y += Math.sin(f.n * 0.87) * 2.5 * dt;
+    f.x = clamp(f.x, 8, S.W - 8);
+    f.y = clamp(f.y, 8, S.H - 8);
+  }
+
+  // soft-cap cull: starve weakest when over soft limit
+  if (S.orgs.length > MAX_ORG) {
+    S.orgs.sort((a, b) => a.energy - b.energy);
+    while (S.orgs.length > MAX_ORG) {
+      kill(S.orgs[0], 0);
+    }
+  }
+
+  for (let i = S.orgs.length - 1; i >= 0; i--) {
+    const o = S.orgs[i];
+    o.age += dt;
+    o.cool = Math.max(0, o.cool - dt);
+    o.wanderT -= dt;
+    if (o.wanderT <= 0) {
+      o.wanderT = rand(0.6, 2.2);
+      o.wanderA = rand(0, Math.PI * 2);
+    }
+
+    // metabolism: larger & faster burn more
+    const burn = (0.55 + o.genes.speed * 0.35 + o.genes.size * 0.4) * dt;
+    o.energy -= burn;
+
+    // AI goals
+    const prey = nearestPrey(o);
+    const food = nearestFood(o);
+    const mate = nearestMate(o);
+
+    let steered = false;
+    if (prey && o.genes.aggression > 0.5 && o.energy < 90) {
+      steerToward(o, prey.x, prey.y, 0.22 + o.genes.aggression * 0.25);
+      steered = true;
+      // attack
+      const d = Math.hypot(prey.x - o.x, prey.y - o.y);
+      if (d < radiusOf(o) + radiusOf(prey) * 0.7) {
+        const dmg = (4 + o.genes.aggression * 10 + o.genes.size * 3) * dt;
+        prey.energy -= dmg;
+        o.energy += dmg * 0.55;
+        // defer removal — energy<=0 culled at end of each org tick / sweep
+      }
+    } else if (mate && o.energy >= REPRO_ENERGY * 0.9) {
+      steerToward(o, mate.x, mate.y, 0.18);
+      steered = true;
+      tryReproduce(o, mate);
+    } else if (food) {
+      steerToward(o, food.x, food.y, 0.2 + o.genes.speed * 0.08);
+      steered = true;
+      const d = Math.hypot(food.x - o.x, food.y - o.y);
+      if (d < radiusOf(o) + food.r + 2) {
+        o.energy = Math.min(120, o.energy + 14 + o.genes.size * 2);
+        const fi = S.food.indexOf(food);
+        if (fi >= 0) S.food.splice(fi, 1);
+      }
+    }
+
+    if (!steered) {
+      o.vx += Math.cos(o.wanderA) * 0.12;
+      o.vy += Math.sin(o.wanderA) * 0.12;
+    }
+
+    // cooperation boost
+    if (S.cooperation && o.genes.coop > 0.45) {
+      let near = 0;
+      for (let j = 0; j < S.orgs.length; j++) {
+        const b = S.orgs[j];
+        if (b === o) continue;
+        const dh = Math.abs(b.genes.hue - o.genes.hue);
+        const hueClose = Math.min(dh, 360 - dh) < 40;
+        if (!hueClose) continue;
+        const d2 = (b.x - o.x) ** 2 + (b.y - o.y) ** 2;
+        if (d2 < 55 * 55) near++;
+      }
+      if (near > 0) o.energy += Math.min(0.35, near * 0.06 * o.genes.coop) * dt * 8;
+    }
+
+    softSeparate(o);
+
+    // integrate
+    const maxV = 28 + o.genes.speed * 55;
+    const sp = Math.hypot(o.vx, o.vy);
+    if (sp > maxV) { o.vx = o.vx / sp * maxV; o.vy = o.vy / sp * maxV; }
+    o.vx *= 0.96;
+    o.vy *= 0.96;
+    o.x += o.vx * dt * 18;
+    o.y += o.vy * dt * 18;
+
+    // walls
+    const m = radiusOf(o) + 2;
+    if (o.x < m) { o.x = m; o.vx *= -0.6; }
+    if (o.x > S.W - m) { o.x = S.W - m; o.vx *= -0.6; }
+    if (o.y < m) { o.y = m; o.vy *= -0.6; }
+    if (o.y > S.H - m) { o.y = S.H - m; o.vy *= -0.6; }
+
+    if (o.energy <= 0) kill(o, i);
+  }
+  // sweep any deferred deaths (e.g. prey drained mid-tick)
+  for (let i = S.orgs.length - 1; i >= 0; i--) {
+    if (S.orgs[i].energy <= 0) kill(S.orgs[i], i);
+  }
+}
+
+function draw() {
+  const { W, H } = S;
+  ctx.fillStyle = "#07080f";
+  ctx.fillRect(0, 0, W, H);
+
+  // subtle vignette / grid
+  const g = ctx.createRadialGradient(W * 0.5, H * 0.4, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+  g.addColorStop(0, "#12162a");
+  g.addColorStop(1, "#07080f");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  if (!reducedMotion) {
+    ctx.strokeStyle = "rgba(157,108,255,0.04)";
+    ctx.lineWidth = 1;
+    const step = 48;
+    ctx.beginPath();
+    for (let x = 0; x < W; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+    for (let y = 0; y < H; y += step) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+    ctx.stroke();
+  }
+
+  // food
+  for (let i = 0; i < S.food.length; i++) {
+    const f = S.food[i];
+    ctx.beginPath();
+    ctx.fillStyle = hsl(145, 70, 58, 0.85);
+    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    ctx.fill();
+    if (!reducedMotion) {
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(112,243,173,0.12)";
+      ctx.arc(f.x, f.y, f.r * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // sense rings
+  if (S.senseRings) {
+    for (let i = 0; i < S.orgs.length; i++) {
+      const o = S.orgs[i];
+      const sel = o.id === S.selected;
+      ctx.beginPath();
+      ctx.strokeStyle = sel ? "rgba(66,232,255,0.35)" : "rgba(157,108,255,0.10)";
+      ctx.lineWidth = sel ? 1.5 : 1;
+      ctx.arc(o.x, o.y, senseOf(o), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  } else if (S.selected != null) {
+    const o = findById(S.selected);
+    if (o) {
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(66,232,255,0.28)";
+      ctx.lineWidth = 1.4;
+      ctx.arc(o.x, o.y, senseOf(o), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // organisms
+  for (let i = 0; i < S.orgs.length; i++) {
+    const o = S.orgs[i];
+    const r = radiusOf(o);
+    const selected = o.id === S.selected;
+    const energyRatio = clamp(o.energy / 100, 0.15, 1);
+
+    if (!reducedMotion || selected) {
+      ctx.beginPath();
+      ctx.fillStyle = hsl(o.genes.hue, 70, 55, 0.12 + energyRatio * 0.1);
+      ctx.arc(o.x, o.y, r * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.fillStyle = hsl(o.genes.hue, 68, 52 + energyRatio * 10, 0.92);
+    ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // eye / direction
+    const ang = Math.atan2(o.vy, o.vx) || 0;
+    const er = r * 0.28;
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(7,7,11,0.75)";
+    ctx.arc(o.x + Math.cos(ang) * r * 0.35, o.y + Math.sin(ang) * r * 0.35, er, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (selected) {
+      ctx.beginPath();
+      ctx.strokeStyle = "#42e8ff";
+      ctx.lineWidth = 2;
+      ctx.arc(o.x, o.y, r + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // aggression tip
+    if (S.predation && o.genes.aggression > 0.6) {
+      ctx.beginPath();
+      ctx.strokeStyle = hsl(350, 80, 60, 0.5);
+      ctx.lineWidth = 1.2;
+      ctx.arc(o.x, o.y, r + 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+}
+
+function updateStats() {
+  const n = S.orgs.length;
+  $("#sPop").textContent = n;
+  $("#capPill").textContent = `POP ${n} / ${MAX_ORG}`;
+  $("#sFood").textContent = S.food.length;
+  $("#sBirths").textContent = S.births;
+  $("#sDeaths").textContent = S.deaths;
+
+  let maxGen = 0, sumSp = 0, sumSz = 0, sumSe = 0;
+  for (let i = 0; i < n; i++) {
+    const o = S.orgs[i];
+    if (o.gen > maxGen) maxGen = o.gen;
+    sumSp += o.genes.speed;
+    sumSz += o.genes.size;
+    sumSe += o.genes.sense;
+  }
+  $("#sGen").textContent = maxGen;
+  if (n) {
+    $("#sAvgSp").textContent = (sumSp / n).toFixed(2);
+    $("#sAvgSz").textContent = `${(sumSz / n).toFixed(2)} · ${(sumSe / n).toFixed(2)}`;
+  } else {
+    $("#sAvgSp").textContent = "—";
+    $("#sAvgSz").textContent = "—";
+  }
+}
+
+function setBar(el, val, max = 2) {
+  el.style.width = clamp((val / max) * 100, 0, 100) + "%";
+}
+
+function updateSelUI() {
+  const o = S.selected != null ? findById(S.selected) : null;
+  if (!o) {
+    $("#selEmpty").hidden = false;
+    $("#selBody").hidden = true;
+    $("#treeEmpty").hidden = false;
+    $("#treeBody").hidden = true;
+    $("#treeBody").innerHTML = "";
+    return;
+  }
+  $("#selEmpty").hidden = true;
+  $("#selBody").hidden = false;
+  $("#oId").textContent = "#" + o.id;
+  $("#oGen").textContent = o.gen;
+  $("#oParents").textContent = o.parents.length
+    ? o.parents.map((p) => "#" + p).join(" · ")
+    : "primordial";
+  $("#oEnergy").textContent = o.energy.toFixed(1);
+  $("#oAge").textContent = o.age.toFixed(1) + "s";
+  $("#oColor").innerHTML = `<span class="swatch" style="background:${hsl(o.genes.hue,68,55)}"></span>hue ${o.genes.hue|0}`;
+
+  setBar($("#bSpeed"), o.genes.speed, 2.2);
+  setBar($("#bSize"), o.genes.size, 2.0);
+  setBar($("#bSense"), o.genes.sense, 2.4);
+  setBar($("#bAgg"), o.genes.aggression, 1);
+  setBar($("#bCoop"), o.genes.coop, 1);
+  $("#tSpeed").textContent = o.genes.speed.toFixed(2);
+  $("#tSize").textContent = o.genes.size.toFixed(2);
+  $("#tSense").textContent = o.genes.sense.toFixed(2);
+  $("#tAgg").textContent = o.genes.aggression.toFixed(2);
+  $("#tCoop").textContent = o.genes.coop.toFixed(2);
+
+  renderTree(o);
+}
+
+function renderTree(o) {
+  const nodes = [];
+  // ancestors
+  const anc = [];
+  let frontier = o.parents.slice();
+  const seen = new Set([o.id]);
+  let depth = 0;
+  while (frontier.length && depth < 6) {
+    const next = [];
+    for (const pid of frontier) {
+      if (seen.has(pid)) continue;
+      seen.add(pid);
+      const snap = snapshot(pid);
+      if (snap) {
+        anc.push(snap);
+        snap.parents.forEach((pp) => next.push(pp));
+      }
+    }
+    frontier = next;
+    depth++;
+  }
+  anc.sort((a, b) => a.gen - b.gen);
+
+  // descendants (live + archive children)
+  const desc = [];
+  const childIds = new Set(o.children);
+  S.orgs.forEach((c) => {
+    if (c.parents.includes(o.id)) childIds.add(c.id);
+  });
+  S.archive.forEach((c) => {
+    if (c.parents.includes(o.id)) childIds.add(c.id);
+  });
+  [...childIds].slice(0, 12).forEach((cid) => {
+    const snap = snapshot(cid);
+    if (snap) desc.push(snap);
+  });
+  desc.sort((a, b) => a.gen - b.gen);
+
+  const row = (snap, cls) => {
+    const live = !!findById(snap.id);
+    const klass = [cls, live ? "" : "dead"].filter(Boolean).join(" ");
+    return `<div class="node ${klass}" data-id="${snap.id}" role="button" tabindex="0">
+      <span class="gen">G${snap.gen}</span>#${snap.id}
+      <div class="meta">${live ? "alive" : "archived"} · hue ${snap.genes.hue|0} · spd ${snap.genes.speed.toFixed(2)}</div>
+    </div>`;
+  };
+
+  let html = "";
+  if (anc.length) {
+    html += anc.map((s) => row(s, "")).join("");
+  }
+  html += row(
+    { id: o.id, gen: o.gen, parents: o.parents, genes: o.genes, alive: true, children: o.children },
+    "me"
+  );
+  if (desc.length) {
+    html += desc.map((s) => row(s, "")).join("");
+  }
+  if (!anc.length && !desc.length) {
+    html += `<div class="empty" style="padding:4px 0">No recorded relatives yet.</div>`;
+  }
+
+  $("#treeEmpty").hidden = true;
+  $("#treeBody").hidden = false;
+  $("#treeBody").innerHTML = html;
+}
+
+function pickAt(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const x = ((clientX - rect.left) / rect.width) * S.W;
+  const y = ((clientY - rect.top) / rect.height) * S.H;
+  let best = null, bd = Infinity;
+  for (let i = 0; i < S.orgs.length; i++) {
+    const o = S.orgs[i];
+    const d = Math.hypot(o.x - x, o.y - y);
+    const hit = radiusOf(o) + 8;
+    if (d < hit && d < bd) { bd = d; best = o; }
+  }
+  S.selected = best ? best.id : null;
+  updateSelUI();
+}
+
+function loop(ts) {
+  S.raf = requestAnimationFrame(loop);
+  if (!S.lastTs) S.lastTs = ts;
+  let dt = (ts - S.lastTs) / 1000;
+  S.lastTs = ts;
+  dt = Math.min(0.05, dt);
+
+  resize();
+
+  if (S.running) {
+    const steps = S.speed <= 1 ? 1 : Math.min(4, Math.ceil(S.speed));
+    const slice = (dt * S.speed) / steps;
+    for (let s = 0; s < steps; s++) step(slice);
+  }
+
+  draw();
+
+  S.uiTick += dt;
+  if (S.uiTick > 0.2) {
+    S.uiTick = 0;
+    updateStats();
+    if (S.selected != null) {
+      const o = findById(S.selected);
+      if (o) {
+        $("#oEnergy").textContent = o.energy.toFixed(1);
+        $("#oAge").textContent = o.age.toFixed(1) + "s";
+      } else {
+        updateSelUI();
+      }
+    }
+  }
+}
+
+function setRunning(on) {
+  S.running = on;
+  $("#runDot").classList.toggle("on", on);
+  $("#runText").textContent = on ? "Running" : "Paused";
+  $("#btnPlay").textContent = on ? "Pause" : "Play";
+}
+
+function bind() {
+  $("#btnPlay").onclick = () => setRunning(!S.running);
+  $("#btnReset").onclick = () => { resize(); seedWorld(); setRunning(true); };
+  $("#btnSpawn").onclick = () => spawnBunch(10);
+  $("#btnClear").onclick = () => clearOrgs();
+
+  const speed = $("#speed");
+  const syncSpeed = () => {
+    S.speed = (+speed.value) / 100;
+    $("#speedOut").textContent = S.speed.toFixed(2) + "×";
+    const fill = ((+speed.value - +speed.min) / (+speed.max - +speed.min)) * 100;
+    speed.style.setProperty("--fill", fill + "%");
+  };
+  speed.oninput = syncSpeed;
+  syncSpeed();
+
+  const tog = (btn, key, cls) => {
+    btn.onclick = () => {
+      S[key] = !S[key];
+      btn.classList.toggle("active", S[key]);
+      if (cls) btn.classList.toggle(cls, S[key]);
+      btn.setAttribute("aria-pressed", S[key] ? "true" : "false");
+    };
+  };
+  tog($("#togPred"), "predation");
+  tog($("#togCoop"), "cooperation", "green");
+  tog($("#togSense"), "senseRings", "violet");
+
+  canvas.addEventListener("pointerdown", (e) => {
+    pickAt(e.clientX, e.clientY);
+  });
+
+  $("#treeBody").addEventListener("click", (e) => {
+    const node = e.target.closest(".node");
+    if (!node) return;
+    const id = +node.dataset.id;
+    if (findById(id)) {
+      S.selected = id;
+      updateSelUI();
+    }
+  });
+
+  window.addEventListener("resize", () => resize());
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) S.lastTs = 0;
+  });
+}
+
+function boot() {
+  bind();
+  resize();
+  seedWorld();
+  setRunning(true);
+  S.raf = requestAnimationFrame(loop);
+}
+
+boot();
+</script>
+</body>
+</html>

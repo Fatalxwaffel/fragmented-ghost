@@ -1,0 +1,15 @@
+AURELIA LIVING CITY — DEBUG APK
+
+1. Extract Aurelia-Living-City-Android-Debug.apk from this ZIP.
+2. Open the APK on your Android phone.
+3. If prompted, allow your browser or file manager to install unknown apps.
+4. Tap Install, then Open.
+
+This is a temporary debug build for testing. It is signed with an Android debug
+certificate and is not intended for Google Play. Android 8.0 or newer is
+required. The city game is bundled in the APK and does not need an internet
+connection to run.
+
+If Android blocks the installation, open Settings > Apps > Special app access >
+Install unknown apps, select the app you used to open the APK, and temporarily
+enable Allow from this source.
