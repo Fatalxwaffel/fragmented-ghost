@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, height=device-height, interactive-widget=resizes-content, shrink-to-fit=0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#020912" />
+  <meta name="description" content="AURELIA Living Ocean — Fragmented Ghost. Explore a living procedural ocean ecosystem powered by WebGPU." />
+  <meta property="og:title" content="AURELIA Living Ocean — Fragmented Ghost" />
+  <meta property="og:image" content="https://holtsetio.com/img/lab/aurelia.jpg" />
+  <title>AURELIA — Living Ocean</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    body {
+      background: radial-gradient(circle at 50% 22%, #092236, #020912 58%, #00050a);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #container {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #veil {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: black;
+      opacity: 1;
+      pointer-events: none;
+      transition: opacity .85s ease-in-out, visibility .85s step-end;
+      z-index: 100;
+    }
+    #loading-card {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(330px, calc(100vw - 48px));
+      transform: translate(-50%, -50%);
+      color: rgba(232, 250, 255, .92);
+      text-align: center;
+    }
+    #loading-orbit {
+      width: 62px;
+      height: 62px;
+      margin: 0 auto 19px;
+      border: 1px solid rgba(118, 235, 255, .17);
+      border-radius: 50%;
+      position: relative;
+      animation: loading-spin 4s linear infinite;
+    }
+    #loading-orbit::before,
+    #loading-orbit::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+    }
+    #loading-orbit::before { inset: 9px; border: 1px solid rgba(109, 255, 210, .25); }
+    #loading-orbit::after { width: 7px; height: 7px; top: 3px; left: 27px; background: #6fffe0; box-shadow: 0 0 14px #6fffe0; }
+    #loading-kicker { display: block; margin-bottom: 5px; color: rgba(119, 236, 255, .7); font-size: 8px; letter-spacing: .23em; }
+    #loading-card h1 { margin: 0; font-size: 21px; font-weight: 430; letter-spacing: .12em; }
+    #loading-stage { display: block; margin-top: 7px; color: rgba(211, 241, 255, .46); font-size: 8px; letter-spacing: .14em; }
+    #progress-bar {
+      position: relative;
+      width: 100%;
+      height: 2px;
+      margin-top: 20px;
+      overflow: hidden;
+      background-color: rgba(132, 225, 255, .12);
+    }
+    #progress {
+      position: absolute;
+      inset: 0;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.22s ease;
+      background: linear-gradient(90deg, #61dfff, #6bffd1);
+      box-shadow: 0 0 12px rgba(98, 239, 255, .55);
+    }
+    #error {
+      position: absolute;
+      left: 50vw;
+      top: 50vh;
+      transform: translateX(-50%) translateY(-50%);
+      color: #FFFFFF;
+      visibility: hidden;
+      width: min(430px, calc(100vw - 48px));
+      text-align: center;
+      pointer-events: auto;
+    }
+    #error h2 { margin: 0 0 8px; font-size: 22px; font-weight: 450; }
+    #error p { margin: 0 auto 17px; max-width: 360px; color: rgba(221, 245, 255, .62); font-size: 12px; line-height: 1.55; }
+    #error button { min-height: 42px; padding: 0 18px; border: 1px solid rgba(116, 234, 255, .35); border-radius: 12px; background: rgba(95, 218, 255, .1); color: #8deeff; font-size: 9px; letter-spacing: .16em; cursor: pointer; }
+    #brand {
+      position: absolute;
+      left: 18px;
+      top: 16px;
+      z-index: 5;
+      pointer-events: none;
+      color: rgba(255,255,255,.9);
+      letter-spacing: .18em;
+      font-size: 12px;
+      font-weight: 650;
+      text-shadow: 0 2px 12px rgba(0,0,0,.8);
+    }
+    #brand span { opacity: .5; font-weight: 450; }
+    #ecosystem-dashboard {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      z-index: 6;
+      width: 320px;
+      padding: 10px 10px 8px;
+      box-sizing: border-box;
+      background: rgba(2, 10, 18, .42);
+      border: 1px solid rgba(150, 225, 255, .13);
+      border-radius: 10px;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      color: rgba(220,245,255,.7);
+      font-size: 10px;
+      letter-spacing: .12em;
+    }
+    #ecosystem-dashboard canvas { width: 100%; height: 78px; display: block; }
+    .eco-title { margin-bottom: 4px; opacity: .7; }
+    .eco-row { display: flex; justify-content: space-between; opacity: .65; margin-top: 2px; }
+    @media (max-width: 720px) {
+      #ecosystem-dashboard { width: 220px; left: 10px; bottom: 10px; }
+      #ecosystem-dashboard canvas { height: 58px; }
+      #hint { bottom: 92px !important; width: 88%; }
+    }
+    #hint {
+      position: absolute;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 5;
+      pointer-events: none;
+      color: rgba(255,255,255,.55);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-align: center;
+      transition: opacity 1.5s ease;
+    }
+    @keyframes loading-spin { to { transform: rotate(360deg); } }
+  </style>
+  <script defer src="https://s.holtsetio.com/script.js" data-website-id="cb36fa92-2381-4031-8f81-f430a473156d"></script>
+  <script type="module" crossorigin src="./assets/index-CTVuEcHc.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-GYJ1bnFw.css">
+</head>
+<body>
+<div id="container">
+  <div id="brand">AURELIA <span>// LIVING OCEAN</span></div>
+  <div id="hint">TAP A JELLYFISH TO INSPECT · DRAG TO ORBIT · USE POINTER MODE TO ATTRACT OR REPEL</div>
+  <div id="veil">
+    <div id="loading-card">
+      <div id="loading-orbit"></div>
+      <span id="loading-kicker">WEBGPU ECOSYSTEM</span>
+      <h1>AURELIA</h1>
+      <span id="loading-stage">WAKING THE OCEAN</span>
+      <div id="progress-bar"><div id="progress"></div></div>
+    </div>
+    <div id="error"><h2>Ocean unavailable</h2><p id="error-message"></p><button type="button" onclick="location.reload()">TRY AGAIN</button></div>
+  </div>
+</body>
+</html>
