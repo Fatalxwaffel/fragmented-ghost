@@ -16,8 +16,9 @@ Import this repo in Vercel (or Cloudflare Pages / GitHub Pages) and set the prod
 
 ## Notes
 
-- App catalog and social links live in the `SITE_CONFIG` / `APPS` blocks inside `index.html` (keep `SOURCE.html` in sync).
+- App catalog and social links live in the `SITE_CONFIG` / `APPS` blocks inside `index.html`.
 - GhostPhase web preview: `apps/ghostphase/`
+- Spectral Studio source: `projects/spectral-studio/` (builds into `apps/spectral-studio/`)
 - Preview APK: `downloads/ghostphase-3d.apk`
 - Card / hero art: `assets/`
 - No paid subscriptions on this site.
